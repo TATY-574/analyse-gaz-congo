@@ -1,81 +1,47 @@
 import streamlit as st
 import pandas as pd
 
-# 1. CONFIGURATION DE LA PAGE
-st.set_page_config(page_title="Expertise Gaz Congo", layout="wide")
+st.set_page_config(page_title="Valorisation Gaz Congo - Cabinet", layout="wide")
 
-st.title("🇨🇬 Analyse Stratégique : Objectif Gaz à 5 000 FCFA")
-st.markdown("---")
+st.title("📊 Analyse de Bancabilité : Objectif Gaz à 5 000 FCFA")
+st.subheader("Données certifiées d'après le courrier FAAKI-CONGO (Déc. 2025)")
 
-# 2. LES DONNÉES SOURCES (Issues de l'arrêté et du marché)
-# Prix d'entrée selon l'arrêté : 200 FCFA/kg
-prix_entree_arrete = 200.00
+# --- Section des Paramètres (Basée sur le courrier du 22/12/25) ---
+with st.sidebar:
+    st.header("Paramètres d'Exploitation")
+    # Volume de 5 000 tonnes cité dans le courrier
+    volume_mensuel = st.slider("Volume mensuel cible (Tonnes)", 1000, 7000, 5000)
 
-# Total des charges et taxes (Passage, Transport, Marges, TVA) : 310.12 FCFA/kg
-# Calculé à partir de : 84.00 + 15.93 + 44.32 + 8.38 + 1.64 + 63.75 + 12.05 + 0.22 + 0.44 + 50.00 + 9.45 + 16.50 + 3.12 + 0.22 + 0.05 + 1.65
-charges_structure = 310.12
+    st.header("Structure de Prix (FCFA/kg)")
+    # Prix appliqué par Wing Wah selon le courrier [cite: 39]
+    prix_wing_wah = st.number_input("Prix Sortie Wing Wah (Banga Kayo)", value=330.0)
+    # Prix réglementaire de l'arrêté 2018 cité dans le courrier [cite: 39]
+    prix_arrete_2018 = st.number_input("Prix d'Entrée (Arrêté 919/2018)", value=200.0)
 
-# Réalité du terrain : Prix d'achat Wing Wah
-prix_achat_wing_wah = 330.00
+    tva_actuelle = 48.93  # Valeur mémorisée du précédent arrêté
 
-# Objectif final pour l'usager
-objectif_bouteille = 5000.0
-objectif_kg = 400.00 # Car 5000 / 12.5 kg = 400 FCFA/kg
+# --- Calculs ---
+differentiel = prix_wing_wah - prix_arrete_2018  # Soit 130 FCFA/kg [cite: 39]
+impact_mensuel = (volume_mensuel * 1000) * differentiel
+impact_annuel = impact_mensuel * 12
 
-# 3. CALCUL DES SCÉNARIOS
-prix_total_arrete = prix_entree_arrete + charges_structure # 510.12 FCFA
-prix_total_wing_wah = prix_achat_wing_wah + charges_structure # 640.12 FCFA
+economie_tva = (volume_mensuel * 1000) * tva_actuelle * 12
 
-# 4. AFFICHAGE DU GRAPHIQUE
-st.subheader("📊 Comparaison des Structures de Prix (FCFA/kg)")
-
-# Création du DataFrame pour le graphique
-df_data = pd.DataFrame({
-    'Scénario': ['Structure Arrêté', 'Réalité Wing Wah', 'Objectif 5000F'],
-    'Prix (FCFA/kg)': [prix_total_arrete, prix_total_wing_wah, objectif_kg]
-})
-
-# Palette de couleurs personnalisée : Bleu, Rouge, Vert
-st.bar_chart(data=df_data, x='Scénario', y='Prix (FCFA/kg)', color='Scénario')
-
-# 5. ANALYSE DÉTAILLÉE POUR LE CONSEILLER
-st.markdown("### 🔍 Analyse des écarts")
+# --- Affichage des indicateurs ---
 col1, col2, col3 = st.columns(3)
-
 with col1:
-    st.info("🔵 **Structure Arrêté**")
-    st.metric("Prix au kg", f"{prix_total_arrete:.2f} F")
-    st.write(f"Prix bouteille : **{(prix_total_arrete * 12.5):.0f} FCFA**")
-    st.caption("Basé sur un VPC de 200 F/kg.")
-
+    st.metric("Différentiel à compenser", f"{differentiel} FCFA/kg")
 with col2:
-    st.error("🔴 **Réalité Wing Wah**")
-    st.metric("Prix au kg", f"{prix_total_wing_wah:.2f} F")
-    st.write(f"Prix bouteille : **{(prix_total_wing_wah * 12.5):.0f} FCFA**")
-    st.caption("Prix d'achat réel à 330 F/kg.")
-
+    st.metric("Besoin de Financement Annuel", f"{impact_annuel:,.0f} FCFA")
 with col3:
-    st.success("🟢 **Objectif Social**")
-    st.metric("Prix au kg", f"{objectif_kg:.2f} F")
-    st.write(f"Prix bouteille : **5 000 FCFA**")
-    st.caption("Cible pour le consommateur.")
+    st.metric("Gain via Abolition TVA", f"{economie_tva:,.0f} FCFA")
 
-# 6. IMPACT BUDGÉTAIRE (Subvention nécessaire)
-st.divider()
-st.subheader("💰 Estimation de l'Effort de l'État")
+st.info(
+    f"**Note stratégique :** Pour atteindre 5 000 t/mois (7 camions/jour), le besoin en fonds de roulement nécessite un délai de paiement de 30 jours, tel que requis par l'opérateur[cite: 89, 93].")
 
-effort_par_kg = prix_total_wing_wah - objectif_kg
-effort_par_bouteille = effort_par_kg * 12.5
-
-st.warning(f"Pour atteindre l'objectif de 5 000 FCFA, l'État doit subventionner **{effort_par_kg:.2f} FCFA/kg**.")
-
-volume_mensuel = st.number_input("Volume mensuel estimé (Nombre de bouteilles)", value=50000, step=5000)
-subvention_mensuelle = volume_mensuel * effort_par_bouteille
-
-st.metric("Subvention Mensuelle Totale", f"{subvention_mensuelle:,.0f} FCFA")
-
-st.markdown("""
-**Recommandations pour le mémorandum :**
-1. **Exonération de la TVA** : Gain immédiat de 48,93 FCFA/kg.
-2. **Subvention Wing Wah** : Compensation de l'écart entre 330 FCFA et 200 FCFA.
-""")
+# --- Graphique ---
+chart_data = pd.DataFrame({
+    'Structure': ['Prix Social Cible', 'Réalité Wing Wah', 'Ancien Arrêté'],
+    'FCFA/kg': [400, prix_wing_wah, prix_arrete_2018]
+})
+st.bar_chart(chart_data, x='Structure', y='FCFA/kg')
